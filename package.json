@@ -1,0 +1,41 @@
+{
+  "name": "dolbang-helper",
+  "version": "1.0.0",
+  "private": true,
+  "description": "돌방도우미 MVP - 현장 영업용 근거리 법인 탐색 웹앱",
+  "scripts": {
+    "dev": "next dev",
+    "build": "next build",
+    "start": "next start",
+    "lint": "eslint .",
+    "prepare:data": "node scripts/prepare-companies.mjs",
+    "check": "npm run lint && npm run build"
+  },
+  "keywords": [
+    "nextjs",
+    "kakao-map",
+    "excel",
+    "field-sales"
+  ],
+  "author": "dolbang-helper",
+  "license": "ISC",
+  "dependencies": {
+    "dotenv": "^17.4.2",
+    "next": "^16.2.3",
+    "react": "^19.2.5",
+    "react-dom": "^19.2.5",
+    "xlsx": "^0.18.5"
+  },
+  "devDependencies": {
+    "@types/node": "^25.6.0",
+    "@types/react": "^19.2.14",
+    "@types/react-dom": "^19.2.3",
+    "autoprefixer": "^10.5.0",
+    "eslint": "^9.39.4",
+    "eslint-config-next": "^16.2.3",
+    "postcss": "^8.5.9",
+    "tailwindcss": "^3.4.17",
+    "tsx": "^4.21.0",
+    "typescript": "^6.0.2"
+  }
+}

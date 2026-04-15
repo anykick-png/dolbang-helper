@@ -1,0 +1,19 @@
+.next/
+node_modules/
+.npm-cache/
+dist/
+coverage/
+*.log
+
+# env
+.env
+.env.local
+.env*.local
+
+# generated data
+data/geocode_cache.json
+data/failed_addresses.json
+data/cleaned_companies.json
+data/preparation_summary.json
+public/companies.json
+
