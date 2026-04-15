@@ -16,4 +16,4 @@ data/failed_addresses.json
 data/cleaned_companies.json
 data/preparation_summary.json
 public/companies.json
-
+!public/companies.json
