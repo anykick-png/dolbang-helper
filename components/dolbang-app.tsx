@@ -372,7 +372,7 @@ export default function DolbangApp() {
     <main className="mx-auto flex min-h-screen w-full max-w-3xl flex-col bg-transparent pb-36">
       <header className="sticky top-0 z-20 border-b border-brand-100 bg-white/95 px-4 py-4 backdrop-blur">
         <h1 className="text-xl font-bold text-brand-700">돌방 Helper</h1>
-        <p className="mt-1 text-xs text-slate-600">현장 방문용 근거리 기업 탐색</p>
+        <p className="mt-1 text-xs text-slate-600">내 주변 실질자산 찾기</p>
       </header>
 
       <section className="space-y-3 px-4 pt-4">
@@ -620,4 +620,3 @@ export default function DolbangApp() {
     </main>
   );
 }
-
