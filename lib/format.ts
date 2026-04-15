@@ -32,9 +32,6 @@ export const formatDistanceKm = (value: number | null | undefined): string => {
   return `${value.toFixed(2)}km`;
 };
 
-export const normalizeSearchText = (value: string): string =>
-  value.trim().toLowerCase();
-
 export const sanitizePhoneNumberForTel = (
   value: string | null | undefined,
 ): string | null => {
@@ -87,4 +84,3 @@ export const formatGrowth = (
   const signed = ratio >= 0 ? "+" : "";
   return `${signed}${(ratio * 100).toFixed(1)}%`;
 };
-

@@ -7,7 +7,6 @@ import {
   formatMaybeRatio,
   formatMaybeText,
   formatToEok,
-  normalizeSearchText,
   sanitizePhoneNumberForTel,
 } from "../lib/format";
 import { haversineDistanceKm } from "../lib/haversine";
@@ -107,7 +106,6 @@ export default function DolbangApp() {
 
   const [allCompanies, setAllCompanies] = useState<CompanyRecord[]>([]);
   const [userCenter, setUserCenter] = useState(DEFAULT_CENTER);
-  const [searchText, setSearchText] = useState("");
   const [selectedRadiusKm, setSelectedRadiusKm] = useState<(typeof RADIUS_OPTIONS)[number]>(3);
   const [activeSort, setActiveSort] = useState<SortKey>("sales");
   const [selectedCompanyId, setSelectedCompanyId] = useState<string | null>(null);
@@ -221,25 +219,14 @@ export default function DolbangApp() {
     );
   }, []);
 
-  const filteredByText = useMemo(() => {
-    const keyword = normalizeSearchText(searchText);
-    const candidates = allCompanies.filter(
+  const filteredCompanies = useMemo(() => {
+    return allCompanies.filter(
       (company) => typeof company.lat === "number" && typeof company.lng === "number",
     );
-
-    if (!keyword) {
-      return candidates;
-    }
-
-    return candidates.filter((company) =>
-      [company.corporationName, company.ceoName, company.industryName]
-        .map((value) => normalizeSearchText(value ?? ""))
-        .some((value) => value.includes(keyword)),
-    );
-  }, [allCompanies, searchText]);
+  }, [allCompanies]);
 
   const nearbyCompanies = useMemo<CompanyWithDistance[]>(() => {
-    return filteredByText
+    return filteredCompanies
       .map((company) => ({
         ...company,
         distanceKm: haversineDistanceKm(
@@ -250,7 +237,7 @@ export default function DolbangApp() {
         ),
       }))
       .filter((company) => company.distanceKm <= selectedRadiusKm);
-  }, [filteredByText, selectedRadiusKm, userCenter.lat, userCenter.lng]);
+  }, [filteredCompanies, selectedRadiusKm, userCenter.lat, userCenter.lng]);
 
   const sortedNearbyCompanies = useMemo<CompanyWithDistance[]>(() => {
     return [...nearbyCompanies].sort((a, b) => {
@@ -375,15 +362,7 @@ export default function DolbangApp() {
         <p className="mt-1 text-xs text-slate-600">내 주변 실질자산 찾기</p>
       </header>
 
-      <section className="space-y-3 px-4 pt-4">
-        <input
-          type="text"
-          value={searchText}
-          onChange={(event) => setSearchText(event.target.value)}
-          placeholder="기업명, 대표자명, 업종으로 검색"
-          className="w-full rounded-2xl border border-slate-200 bg-white px-4 py-3 text-sm text-slate-800 outline-none transition focus:border-brand-400 focus:ring-2 focus:ring-brand-100"
-        />
-
+      <section className="px-4 pt-4">
         <div className="flex items-center gap-2">
           {RADIUS_OPTIONS.map((radius) => (
             <button
@@ -459,7 +438,7 @@ export default function DolbangApp() {
 
         {dataStatus === "ready" && sortedNearbyCompanies.length === 0 && (
           <p className="rounded-xl border border-slate-200 bg-white px-3 py-4 text-sm text-slate-600">
-            현재 조건에 맞는 기업이 없습니다. 검색어 또는 반경을 조정해보세요.
+            현재 조건에 맞는 기업이 없습니다. 반경을 조정해보세요.
           </p>
         )}
 
