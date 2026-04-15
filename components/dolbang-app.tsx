@@ -13,21 +13,24 @@ import {
 import { haversineDistanceKm } from "../lib/haversine";
 import type { CompanyRecord, CompanyWithDistance } from "../types/company";
 
-const RADIUS_OPTIONS = [1, 3, 5] as const;
-
-const parseDefaultCoordinate = (value: string | undefined, fallback: number): number => {
-  const parsed = Number(value);
-  return Number.isFinite(parsed) ? parsed : fallback;
-};
+const RADIUS_OPTIONS = [1, 3] as const;
 
 type SortKey = "sales" | "profit" | "salesGrowth" | "profitGrowth";
-
 const SORT_BUTTONS: Array<{ key: SortKey; label: string }> = [
   { key: "sales", label: "매출순" },
   { key: "profit", label: "영업이익순" },
   { key: "salesGrowth", label: "매출성장률순" },
   { key: "profitGrowth", label: "영업이익성장률순" },
 ];
+
+type MapStatus = "idle" | "loading" | "ready" | "no-key" | "error";
+type DataStatus = "loading" | "ready" | "error";
+type LocationStatus = "loading" | "ready" | "denied" | "unsupported" | "error";
+
+const parseDefaultCoordinate = (value: string | undefined, fallback: number): number => {
+  const parsed = Number(value);
+  return Number.isFinite(parsed) ? parsed : fallback;
+};
 
 const toValidNumber = (value: number | null | undefined): number | null => {
   if (value === null || value === undefined || Number.isNaN(value)) {
@@ -81,18 +84,12 @@ const DEFAULT_CENTER = {
   lng: parseDefaultCoordinate(process.env.NEXT_PUBLIC_DEFAULT_LNG, 126.978),
 };
 
-type MapStatus = "idle" | "loading" | "ready" | "no-key" | "error";
-type DataStatus = "loading" | "ready" | "error";
-type LocationStatus = "loading" | "ready" | "denied" | "unsupported" | "error";
-
 const DetailRow = ({ label, value }: { label: string; value: string }) => (
   <div className="grid grid-cols-[8rem_1fr] items-start gap-2 border-b border-slate-100 py-2 last:border-b-0">
     <dt className="whitespace-nowrap text-[13px] leading-5 tracking-[-0.01em] text-slate-500">
       {label}
     </dt>
-    <dd className="min-w-0 text-sm font-medium leading-5 text-slate-800 break-words">
-      {value}
-    </dd>
+    <dd className="min-w-0 break-words text-sm font-medium leading-5 text-slate-800">{value}</dd>
   </div>
 );
 
@@ -164,6 +161,7 @@ export default function DolbangApp() {
 
   useEffect(() => {
     let ignore = false;
+
     const loadCompanies = async () => {
       try {
         setDataStatus("loading");
@@ -349,14 +347,26 @@ export default function DolbangApp() {
     kakaoMapRef.current.panTo(target);
   }, [selectedCompany]);
 
-  const navigationLink =
-    selectedCompany && selectedCompany.lat !== null && selectedCompany.lng !== null
-      ? `https://map.kakao.com/link/to/${encodeURIComponent(
-          selectedCompany.corporationName,
-        )},${selectedCompany.lat},${selectedCompany.lng}`
-      : null;
-
   const selectedTel = sanitizePhoneNumberForTel(selectedCompany?.phoneNumber);
+
+  const navigationLink = useMemo(() => {
+    if (!selectedCompany) {
+      return null;
+    }
+
+    if (selectedCompany.lat !== null && selectedCompany.lng !== null) {
+      return `https://map.kakao.com/link/to/${encodeURIComponent(
+        selectedCompany.corporationName,
+      )},${selectedCompany.lat},${selectedCompany.lng}`;
+    }
+
+    const fallbackAddress = selectedCompany.roadAddress ?? selectedCompany.jibunAddress;
+    if (fallbackAddress) {
+      return `https://map.kakao.com/link/search/${encodeURIComponent(fallbackAddress)}`;
+    }
+
+    return null;
+  }, [selectedCompany]);
 
   return (
     <main className="mx-auto flex min-h-screen w-full max-w-3xl flex-col bg-transparent pb-36">
@@ -523,79 +533,91 @@ export default function DolbangApp() {
       </section>
 
       {selectedCompany && (
-        <aside className="fixed inset-x-0 bottom-0 z-30 mx-auto w-full max-w-3xl rounded-t-3xl border border-slate-200 bg-white p-4 shadow-[0_-12px_30px_rgba(15,23,42,0.14)]">
-          <div className="mb-3 flex items-start justify-between gap-4">
-            <div>
+        <aside className="fixed inset-x-0 bottom-0 z-30 mx-auto w-full max-w-3xl overflow-hidden rounded-t-3xl border border-slate-200 bg-white shadow-[0_-12px_30px_rgba(15,23,42,0.14)]">
+          <div className="max-h-[68vh] overflow-y-auto p-4 pb-3">
+            <div className="mb-3">
               <p className="text-xs font-semibold text-brand-600">상세 정보</p>
               <h3 className="mt-1 text-lg font-bold text-slate-900">{selectedCompany.corporationName}</h3>
             </div>
-            <button
-              type="button"
-              onClick={() => setSelectedCompanyId(null)}
-              className="rounded-lg bg-slate-100 px-2 py-1 text-xs font-semibold text-slate-700"
-            >
-              닫기
-            </button>
+
+            <dl>
+              <DetailRow label="거리" value={formatDistanceKm(selectedCompany.distanceKm)} />
+              <DetailRow label="대표자" value={formatMaybeText(selectedCompany.ceoName)} />
+              <DetailRow label="전화번호" value={formatMaybeText(selectedCompany.phoneNumber)} />
+              <DetailRow label="업종" value={formatMaybeText(selectedCompany.industryName)} />
+              <DetailRow label="사업영역" value={formatMaybeText(selectedCompany.businessArea)} />
+              <DetailRow label="도로명주소" value={formatMaybeText(selectedCompany.roadAddress)} />
+              <DetailRow label="지번주소" value={formatMaybeText(selectedCompany.jibunAddress)} />
+              <DetailRow label="2024 매출" value={formatToEok(selectedCompany.sales2024)} />
+              <DetailRow label="2024 영업이익" value={formatToEok(selectedCompany.operatingProfit2024)} />
+              <DetailRow label="2025 매출" value={formatToEok(selectedCompany.sales2025)} />
+              <DetailRow label="2025 영업이익" value={formatToEok(selectedCompany.operatingProfit2025)} />
+              <DetailRow
+                label="매출 성장률"
+                value={formatGrowth(selectedCompany.sales2025, selectedCompany.sales2024)}
+              />
+              <DetailRow
+                label="영업이익 성장률"
+                value={formatGrowth(
+                  selectedCompany.operatingProfit2025,
+                  selectedCompany.operatingProfit2024,
+                )}
+              />
+              <DetailRow label="유동비율" value={formatMaybeRatio(selectedCompany.currentRatio)} />
+              <DetailRow label="부채비율" value={formatMaybeRatio(selectedCompany.debtRatio)} />
+            </dl>
           </div>
 
-          <dl>
-            <DetailRow label="거리" value={formatDistanceKm(selectedCompany.distanceKm)} />
-            <DetailRow label="대표자" value={formatMaybeText(selectedCompany.ceoName)} />
-            <DetailRow label="전화번호" value={formatMaybeText(selectedCompany.phoneNumber)} />
-            <DetailRow label="업종" value={formatMaybeText(selectedCompany.industryName)} />
-            <DetailRow label="사업영역" value={formatMaybeText(selectedCompany.businessArea)} />
-            <DetailRow label="도로명주소" value={formatMaybeText(selectedCompany.roadAddress)} />
-            <DetailRow label="지번주소" value={formatMaybeText(selectedCompany.jibunAddress)} />
-            <DetailRow label="2024 매출" value={formatToEok(selectedCompany.sales2024)} />
-            <DetailRow label="2024 영업이익" value={formatToEok(selectedCompany.operatingProfit2024)} />
-            <DetailRow label="2025 매출" value={formatToEok(selectedCompany.sales2025)} />
-            <DetailRow label="2025 영업이익" value={formatToEok(selectedCompany.operatingProfit2025)} />
-            <DetailRow
-              label="매출 성장률"
-              value={formatGrowth(selectedCompany.sales2025, selectedCompany.sales2024)}
-            />
-            <DetailRow
-              label="영업이익 성장률"
-              value={formatGrowth(
-                selectedCompany.operatingProfit2025,
-                selectedCompany.operatingProfit2024,
+          <div className="sticky bottom-0 border-t border-slate-200 bg-white p-3">
+            <div className="grid grid-cols-3 gap-2">
+              {selectedTel ? (
+                <a
+                  href={`tel:${selectedTel}`}
+                  className="flex min-h-11 items-center justify-center rounded-xl bg-emerald-600 px-2 text-sm font-semibold text-white"
+                >
+                  전화걸기
+                </a>
+              ) : (
+                <button
+                  type="button"
+                  disabled
+                  className="flex min-h-11 items-center justify-center rounded-xl bg-slate-200 px-2 text-sm font-semibold text-slate-500"
+                >
+                  번호 없음
+                </button>
               )}
-            />
-            <DetailRow label="유동비율" value={formatMaybeRatio(selectedCompany.currentRatio)} />
-            <DetailRow label="부채비율" value={formatMaybeRatio(selectedCompany.debtRatio)} />
-          </dl>
 
-          <div className="mt-4 flex gap-2">
-            {selectedTel ? (
-              <a
-                href={`tel:${selectedTel}`}
-                className="flex-1 rounded-xl bg-emerald-600 px-3 py-2 text-center text-sm font-semibold text-white"
-              >
-                전화걸기
-              </a>
-            ) : (
-              <span className="flex-1 rounded-xl bg-slate-200 px-3 py-2 text-center text-sm font-semibold text-slate-500">
-                전화번호 없음
-              </span>
-            )}
+              {navigationLink ? (
+                <a
+                  href={navigationLink}
+                  target="_blank"
+                  rel="noreferrer"
+                  className="flex min-h-11 items-center justify-center rounded-xl bg-brand-600 px-2 text-sm font-semibold text-white"
+                >
+                  길찾기
+                </a>
+              ) : (
+                <button
+                  type="button"
+                  disabled
+                  className="flex min-h-11 items-center justify-center rounded-xl bg-slate-200 px-2 text-sm font-semibold text-slate-500"
+                >
+                  경로 없음
+                </button>
+              )}
 
-            {navigationLink ? (
-              <a
-                href={navigationLink}
-                target="_blank"
-                rel="noreferrer"
-                className="flex-1 rounded-xl bg-brand-600 px-3 py-2 text-center text-sm font-semibold text-white"
+              <button
+                type="button"
+                onClick={() => setSelectedCompanyId(null)}
+                className="flex min-h-11 items-center justify-center rounded-xl bg-slate-900 px-2 text-sm font-semibold text-white"
               >
-                길찾기
-              </a>
-            ) : (
-              <span className="flex-1 rounded-xl bg-slate-200 px-3 py-2 text-center text-sm font-semibold text-slate-500">
-                길찾기 불가
-              </span>
-            )}
+                닫기
+              </button>
+            </div>
           </div>
         </aside>
       )}
     </main>
   );
 }
+
