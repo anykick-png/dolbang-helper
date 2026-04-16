@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useMemo, useRef, useState } from "react";
+import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import {
   formatDistanceKm,
   formatGrowth,
@@ -103,6 +103,7 @@ export default function DolbangApp() {
   const [dataStatus, setDataStatus] = useState<DataStatus>("loading");
   const [locationStatus, setLocationStatus] = useState<LocationStatus>("loading");
   const [locationMessage, setLocationMessage] = useState<string | null>(null);
+  const [isRefreshingLocation, setIsRefreshingLocation] = useState(false);
 
   const [allCompanies, setAllCompanies] = useState<CompanyRecord[]>([]);
   const [userCenter, setUserCenter] = useState(DEFAULT_CENTER);
@@ -186,13 +187,15 @@ export default function DolbangApp() {
     };
   }, []);
 
-  useEffect(() => {
+  const requestCurrentLocation = useCallback((isManualRetry = false) => {
     if (!navigator.geolocation) {
       setLocationStatus("unsupported");
       setLocationMessage("브라우저가 위치 기능을 지원하지 않아 기본 지도로 표시합니다.");
+      setIsRefreshingLocation(false);
       return;
     }
 
+    setIsRefreshingLocation(true);
     setLocationStatus("loading");
     navigator.geolocation.getCurrentPosition(
       (position) => {
@@ -202,22 +205,35 @@ export default function DolbangApp() {
         });
         setLocationStatus("ready");
         setLocationMessage(null);
+        setIsRefreshingLocation(false);
       },
       (error) => {
         if (error.code === error.PERMISSION_DENIED) {
           setLocationStatus("denied");
           setLocationMessage("위치 권한이 거부되어 기본 중심 좌표로 표시합니다.");
+          setIsRefreshingLocation(false);
           return;
         }
+
         setLocationStatus("error");
-        setLocationMessage("현재 위치를 가져오지 못해 기본 중심 좌표로 표시합니다.");
+        setLocationMessage(
+          isManualRetry
+            ? "현재 위치를 다시 가져오지 못했습니다. 잠시 후 다시 시도해주세요."
+            : "현재 위치를 가져오지 못해 기본 중심 좌표로 표시합니다.",
+        );
+        setIsRefreshingLocation(false);
       },
       {
         enableHighAccuracy: true,
-        timeout: 10000,
+        maximumAge: 0,
+        timeout: 12000,
       },
     );
   }, []);
+
+  useEffect(() => {
+    requestCurrentLocation(false);
+  }, [requestCurrentLocation]);
 
   const filteredCompanies = useMemo(() => {
     return allCompanies.filter(
@@ -379,6 +395,19 @@ export default function DolbangApp() {
             </button>
           ))}
         </div>
+
+        <button
+          type="button"
+          onClick={() => requestCurrentLocation(true)}
+          disabled={isRefreshingLocation}
+          className={`mt-2 w-full rounded-xl px-3 py-3 text-sm font-semibold transition ${
+            isRefreshingLocation
+              ? "bg-slate-200 text-slate-500"
+              : "bg-white text-brand-700 ring-1 ring-brand-200"
+          }`}
+        >
+          {isRefreshingLocation ? "내 위치 확인 중..." : "내 위치 다시 찾기"}
+        </button>
       </section>
 
       <section className="relative px-4 pt-3">
