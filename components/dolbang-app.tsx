@@ -379,35 +379,37 @@ export default function DolbangApp() {
       </header>
 
       <section className="px-4 pt-4">
-        <div className="flex items-center gap-2">
-          {RADIUS_OPTIONS.map((radius) => (
-            <button
-              key={radius}
-              type="button"
-              onClick={() => setSelectedRadiusKm(radius)}
-              className={`rounded-xl px-3 py-2 text-sm font-semibold transition ${
-                selectedRadiusKm === radius
-                  ? "bg-brand-600 text-white shadow"
-                  : "bg-white text-slate-700 ring-1 ring-slate-200"
-              }`}
-            >
-              {radius}km
-            </button>
-          ))}
-        </div>
+        <div className="flex flex-nowrap items-center gap-2">
+          <div className="flex shrink-0 items-center gap-2">
+            {RADIUS_OPTIONS.map((radius) => (
+              <button
+                key={radius}
+                type="button"
+                onClick={() => setSelectedRadiusKm(radius)}
+                className={`rounded-xl px-3 py-2 text-sm font-semibold transition ${
+                  selectedRadiusKm === radius
+                    ? "bg-brand-600 text-white shadow"
+                    : "bg-white text-slate-700 ring-1 ring-slate-200"
+                }`}
+              >
+                {radius}km
+              </button>
+            ))}
+          </div>
 
-        <button
-          type="button"
-          onClick={() => requestCurrentLocation(true)}
-          disabled={isRefreshingLocation}
-          className={`mt-2 w-full rounded-xl px-3 py-3 text-sm font-semibold transition ${
-            isRefreshingLocation
-              ? "bg-slate-200 text-slate-500"
-              : "bg-white text-brand-700 ring-1 ring-brand-200"
-          }`}
-        >
-          {isRefreshingLocation ? "내 위치 확인 중..." : "내 위치 다시 찾기"}
-        </button>
+          <button
+            type="button"
+            onClick={() => requestCurrentLocation(true)}
+            disabled={isRefreshingLocation}
+            className={`ml-auto min-h-10 shrink-0 whitespace-nowrap rounded-xl px-3 py-2 text-sm font-semibold transition ${
+              isRefreshingLocation
+                ? "bg-slate-200 text-slate-500"
+                : "bg-white text-brand-700 ring-1 ring-brand-200"
+            }`}
+          >
+            {isRefreshingLocation ? "위치 확인 중..." : "내 위치"}
+          </button>
+        </div>
       </section>
 
       <section className="relative px-4 pt-3">
